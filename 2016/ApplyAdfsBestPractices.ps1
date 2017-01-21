@@ -44,6 +44,9 @@ WARNING: this will break any relying party trusts in place and will require a me
 .PARAMETER EnableVerboseLogging
 Enables verbose logging within windows and the AD FS service
 
+.PARAMETER CheckUpdates
+Ensures all appropriate AD FS updates are installed 
+
 .EXAMPLE
 
 .LINK
@@ -122,7 +125,7 @@ Param(
 
     [Parameter()]
     [switch]
-    $CheckPatches
+    $CheckUpdates
     
     )
 
@@ -209,6 +212,20 @@ if ($EnableVerboseLogging) {
     $null = auditpol.exe /set /subcategory:"Application Generated" /failure:enable /success:enable
 } else {
     Write-Verbose "Verbose Logging check is disabled"
+}
+
+if ($CheckUpdates) {
+    # Add code to check age of updates.json and only regenerate if it's >1week old)
+    . (Join-Path $PSScriptRoot 'GenerateRequiredUpdatesFile.ps1')
+    $Updates = Get-Content updates.json | Out-String | ConvertFrom-Json 
+    foreach ($Update in $Updates.Updates) {
+        $id = $Update.'KB #'
+        if (-not (Get-Hotfix -Id $id -ErrorAction SilentlyContinue)) {
+            "KB$id should be installed."
+        } else {
+            # KB is installed
+        }
+    }
 }
 
 #TODO: Restart all AD FS services in the farm
